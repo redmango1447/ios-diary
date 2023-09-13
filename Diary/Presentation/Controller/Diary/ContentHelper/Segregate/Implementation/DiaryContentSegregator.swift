@@ -7,15 +7,14 @@
 
 struct DiaryContentSegregator: DiaryContentSegregatable {
     func segregate(text: String?) -> (title: String, content: String) {
-        let paragraphs = text?.components(separatedBy: "\n") ?? []
+        let paragraphs = text?.split(separator: "\n", maxSplits: 1) ?? []
         
-        // 첫 번째 개행 문자 이전의 텍스트를 제목으로 설정합니다.
         if let title = paragraphs.first {
             let content = paragraphs
                              .dropFirst()
-                             .joined(separator: "\n")
+                             .joined()
                              .trimmingCharacters(in: .whitespacesAndNewlines)
-            return (title: title, content: content)
+            return (title: String(title), content: String(content))
         } else {
             return (title: "", content: "")
         }

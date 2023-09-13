@@ -11,8 +11,11 @@ final class DiaryViewController: UIViewController {
     
     // MARK: - Private Property
     
-    private let dataManager: DataManager
-    private let diary: Diary
+    private let createDiary: CreateDiary
+    private let updateDiary: UpdateDiary
+    private let deleteDiary: DeleteDiary
+    
+    private var diary: Diary
     private let textView = UITextView()
     private let compositor: DiaryContentComposable
     private let segregator: DiaryContentSegregatable
@@ -20,21 +23,34 @@ final class DiaryViewController: UIViewController {
     
     // MARK: - Lifecycle
     
-    init(dataManager: DataManager,
-         formatter: DateFormattable,
-         diary: Diary? = nil
+    init(
+        createDiary: CreateDiary = DefaultCreateDiary(),
+        updateDiary: UpdateDiary = DefaultUpdateDiary(),
+        deleteDiary: DeleteDiary = DefaultDeleteDiary(),
+        compositor: DiaryContentComposable = DiaryContentCompositor(),
+        segregator: DiaryContentSegregatable = DiaryContentSegregator(),
+        formatter: DateFormattable,
+        diary: Diary? = nil
     ) {
-        self.dataManager = dataManager
+        self.createDiary = createDiary
+        self.updateDiary = updateDiary
+        self.deleteDiary = deleteDiary
+        self.compositor = compositor
+        self.segregator = segregator
         self.currentFormatter = formatter
         
         if let diary = diary {
             self.diary = diary
         } else {
-            self.diary = Diary(context: dataManager.container.viewContext)
+            self.diary = Diary(
+                id: UUID(),
+                title: "",
+                content: "",
+                createdDate: Date()
+            )
+            
+            createDiary.create(self.diary)
         }
-        
-        self.compositor = DiaryContentCompositor()
-        self.segregator = DiaryContentSegregator()
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -52,7 +68,7 @@ final class DiaryViewController: UIViewController {
     }
     
     override func viewWillDisappear(_ animated: Bool) {
-        updateDiary()
+        update()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -64,11 +80,11 @@ final class DiaryViewController: UIViewController {
     
     // MARK: - CRUD
     
-    private func updateDiary() {
+    private func update() {
         let trimmedText = self.textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if trimmedText.isEmpty {
-            self.dataManager.container.viewContext.delete(self.diary)
+            deleteDiary.delete(self.diary)            
             return
         }
         
@@ -76,9 +92,8 @@ final class DiaryViewController: UIViewController {
         
         self.diary.title = text.title
         self.diary.content = text.content
-        self.diary.createdDate = diary.createdDate ?? Date()
         
-        dataManager.saveContext()
+        updateDiary.update(self.diary.id, diary: self.diary)
     }
     
     // MARK: - Private Method(Navigation)
@@ -89,7 +104,7 @@ final class DiaryViewController: UIViewController {
     }
     
     private func setupNavigationTitle() {
-        let date = currentFormatter.format(date: self.diary.createdDate ?? Date())
+        let date = currentFormatter.format(date: self.diary.createdDate)
         self.navigationItem.title = date
     }
     
@@ -133,17 +148,20 @@ final class DiaryViewController: UIViewController {
             title: "Share",
             style: .default,
             handler: { [weak self]  _ in
-                guard let diaryContent = self?.compositor.composite(
-                    title: self?.diary.title,
-                    content: self?.diary.content
-                ) else { return }
+                
+                guard let self = self else { return }
+                
+                let diaryContent = self.compositor.composite(
+                    title: self.diary.title,
+                    content: self.diary.content
+                )
                 
                 let activityView = UIActivityViewController(
                     activityItems: [diaryContent],
                     applicationActivities: nil
                 )
                 
-                self?.present(activityView, animated: true)
+                self.present(activityView, animated: true)
             }
         )
     }
@@ -168,8 +186,7 @@ final class DiaryViewController: UIViewController {
         )
         
         let delete = UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-            self?.dataManager.container.viewContext.delete(diary)
-            self?.dataManager.saveContext()
+            self?.deleteDiary.delete(diary)
             self?.navigationController?.popViewController(animated: true)
         }
         
@@ -261,7 +278,7 @@ final class DiaryViewController: UIViewController {
     
     @objc private func keybordWillHide() {
         self.textView.contentInset = .zero
-        updateDiary()
+        update()
     }
     
     // MARK: - Private Method(scene lifecycle)
@@ -276,6 +293,6 @@ final class DiaryViewController: UIViewController {
     }
     
     @objc private func enterBackground() {
-        updateDiary()
+        update()
     }
 }

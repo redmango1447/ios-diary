@@ -9,7 +9,8 @@ import UIKit
 final class MainViewController: UIViewController {
     
     // MARK: - Private Property
-    private let dataManager: DataManager
+    private let fetchDiaries: FetchDiaries
+    private let deleteDiary: DeleteDiary
     
     private let compositor: DiaryContentCompositor
     private let currentFormatter = CurrentDateFormatter()
@@ -21,8 +22,12 @@ final class MainViewController: UIViewController {
     
     // MARK: - Lifecycle
     
-    init(dataManager: DataManager) {
-        self.dataManager = dataManager
+    init(
+        fetchDiaries: FetchDiaries = DefaultFetchDiaries(),
+        deleteDiary: DeleteDiary = DefaultDeleteDiary()
+    ) {
+        self.fetchDiaries = fetchDiaries
+        self.deleteDiary = deleteDiary
         self.compositor = DiaryContentCompositor()
         super.init(nibName: nil, bundle: nil)
     }
@@ -45,8 +50,14 @@ final class MainViewController: UIViewController {
     // MARK: - CRUD
     
     private func readDiaries() {
-        self.diaries = dataManager.fetch()
-        collectionView.reloadData()
+        let result = fetchDiaries.fetch()
+        switch result {
+        case .success(let diaries):
+            self.diaries = diaries
+            collectionView.reloadData()
+        case .failure(let failure):
+            print(failure.localizedDescription)
+        }        
     }
     
     // MARK: - Private Method(Navigation)
@@ -64,7 +75,6 @@ final class MainViewController: UIViewController {
     
     @objc private func tapAddButton() {
         let diaryViewController = DiaryViewController(
-            dataManager: dataManager,
             formatter: currentFormatter
         )
         self.navigationController?.pushViewController(diaryViewController, animated: true)
@@ -160,8 +170,7 @@ final class MainViewController: UIViewController {
         let deleteAlert = UIAlertController(title: "진짜요?", message: "정말로 삭제하시겠어요?", preferredStyle: .alert)
         
         let delete = UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-            self?.dataManager.container.viewContext.delete(diary)
-            self?.dataManager.saveContext()
+            self?.deleteDiary.delete(diary)
             self?.readDiaries()
         }
         
@@ -197,8 +206,7 @@ extension MainViewController: UICollectionViewDelegate, UICollectionViewDataSour
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let diary = diaries[indexPath.row]
-        let diaryViewController = DiaryViewController(
-            dataManager: dataManager,
+        let diaryViewController = DiaryViewController(            
             formatter: currentFormatter,
             diary: diary
         )

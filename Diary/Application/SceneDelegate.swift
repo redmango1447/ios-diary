@@ -9,7 +9,6 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    let dataManager: DataManager = DataManager()
     
     func scene(
         _ scene: UIScene,
@@ -19,7 +18,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         let navigationController = UINavigationController(
-            rootViewController: MainViewController(dataManager: dataManager)
+            rootViewController: MainViewController()
         )
         
         window = UIWindow(windowScene: windowScene)

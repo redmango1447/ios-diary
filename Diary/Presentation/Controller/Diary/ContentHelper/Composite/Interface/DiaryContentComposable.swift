@@ -8,5 +8,5 @@
 import Foundation
 
 protocol DiaryContentComposable {
-    func composite(title: String?, content: String?) -> String?
+    func composite(title: String, content: String) -> String
 }
