@@ -68,6 +68,7 @@ final class DiaryViewController: UIViewController {
     }
     
     override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
         update()
     }
     
